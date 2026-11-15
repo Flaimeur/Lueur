@@ -240,14 +240,12 @@ public sealed class OpenRgbService : IDisposable
             try
             {
                 if (_client?.Connected != true) return;
+                // Seulement les couleurs : OpenRGB ne transmet au micro que ce qui a change. Ne PAS remettre le
+                // mode Direct ici : chez OpenRGB, un changement de mode relance la preparation HID++ du micro,
+                // qui le repasse au noir avant les couleurs (micro eteint, changements lents).
                 for (int i = 0; i < _devices.Length; i++)
-                {
-                    if (_devices[i].Vendor != "Logitech" || Excluded.Contains(_devices[i].Name)) continue;
-                    // Le micro peut repasser seul sur son eclairage interne : les couleurs envoyees en mode
-                    // Direct sont alors ignorees. On remet le mode Direct avant chaque renvoi.
-                    try { _client.SetCustomMode(i); } catch (Exception) { }
-                    Push(i, LastColor);
-                }
+                    if (_devices[i].Vendor == "Logitech" && !Excluded.Contains(_devices[i].Name))
+                        Push(i, LastColor);
             }
             finally { Monitor.Exit(_lock); }
         }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));

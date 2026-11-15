@@ -17,11 +17,16 @@ public sealed record SceneDef(string Name, string Sub, LightLook Look)
         new("Nuit", "Rouge veilleuse 5 %", new LightLook(false, 4, 1.0, 2700, 0.05)),
     };
 
-    /// <summary>Degrade de la tuile : la couleur du look, du plus clair au plus sombre.</summary>
+    /// <summary>
+    /// Degrade de la tuile : la couleur du look, assombrie pour que le texte blanc reste lisible meme sur
+    /// un blanc froid (le haut de la tuile ne depasse jamais ~70 % de luminosite).
+    /// </summary>
     public (Rgb From, Rgb To) Gradient()
     {
         var c = Look.BaseRgb;
-        var light = new Rgb((byte)Math.Min(255, c.R * 0.9 + 25), (byte)Math.Min(255, c.G * 0.9 + 25), (byte)Math.Min(255, c.B * 0.9 + 25));
-        return (light, c.Scale(0.35 + Look.Level * 0.3));
+        double peak = Math.Max(c.R, Math.Max(c.G, c.B)) / 255.0;
+        double luminance = (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255.0;
+        double top = luminance > 0.6 ? 0.55 : 0.8; // couleurs tres claires (blancs) : plus sombres
+        return (c.Scale(top / Math.Max(peak, 0.01) * peak), c.Scale(0.25 + Look.Level * 0.2));
     }
 }

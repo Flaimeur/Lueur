@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -12,7 +12,7 @@
     <RootNamespace>Lueur</RootNamespace>
     <ApplicationIcon>Assets\lueur.ico</ApplicationIcon>
     <!-- Version publiee : la Release GitHub s'appelle v<Version>, et Lueur la compare a la sienne. -->
-    <Version>1.1.0</Version>
+    <Version>1.1.1</Version>
     <Product>Lueur</Product>
     <Description>Eclairage chambre IKEA + RGB du PC</Description>
   </PropertyGroup>

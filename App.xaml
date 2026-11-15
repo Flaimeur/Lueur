@@ -307,6 +307,53 @@
             </Setter>
         </Style>
 
+        <!-- Menus contextuels sombres (clic droit sur une ambiance...) -->
+        <Style TargetType="ContextMenu">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="HasDropShadow" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ContextMenu">
+                        <Border Background="#F21C1C24" BorderBrush="#26FFFFFF" BorderThickness="1" CornerRadius="12" Padding="6" Margin="4">
+                            <Border.Effect><DropShadowEffect BlurRadius="18" ShadowDepth="2" Opacity="0.5"/></Border.Effect>
+                            <StackPanel IsItemsHost="True"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="MenuItem">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Foreground" Value="{StaticResource TextPrimary}"/>
+            <Setter Property="FontFamily" Value="{StaticResource TextFont}"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="MenuItem">
+                        <Border x:Name="Bg" CornerRadius="8" Background="Transparent" Padding="12,8">
+                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="#1FFFFFFF"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="Separator">
+            <Setter Property="OverridesDefaultStyle" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Separator">
+                        <Border Height="1" Background="#1FFFFFFF" Margin="8,4"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <!-- Pastille de couleur rapide -->
         <Style x:Key="Swatch" TargetType="Button">
             <Setter Property="Width" Value="34"/>
