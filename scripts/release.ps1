@@ -11,7 +11,12 @@ Set-Location $root
 $version = ([xml](Get-Content Lueur.csproj)).Project.PropertyGroup.Version | Where-Object { $_ } | Select-Object -First 1
 if (-not $version) { throw "Version introuvable dans Lueur.csproj" }
 $tag = "v$version"
-if (gh release view $tag 2>$null) { throw "La release $tag existe deja : monte la version dans Lueur.csproj." }
+# gh ecrit « release not found » sur stderr quand elle n'existe pas : ce n'est pas une erreur ici.
+$ErrorActionPreference = 'Continue'
+gh release view $tag *> $null
+$exists = $LASTEXITCODE -eq 0
+$ErrorActionPreference = 'Stop'
+if ($exists) { throw "La release $tag existe deja : monte la version dans Lueur.csproj." }
 if (git status --porcelain -- Core *.cs *.xaml Lueur.csproj) { throw "Des fichiers de l'appli ne sont pas commites." }
 
 $out = Join-Path $root 'release'
