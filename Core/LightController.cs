@@ -58,9 +58,6 @@ public sealed class LightController : IDisposable
         Pc.SetAll(!Settings.SyncPcWithRoom || AnyRoomLightOn ? Settings.Look.ToRgb() : Rgb.Black);
         SystemEvents.PowerModeChanged += OnPowerModeChanged;
         _ = WatchPcAsync(_cts.Token);
-        // OpenRGB a pu detecter le Yeti X pendant que G HUB le tenait (demarrage de session) : sa connexion
-        // vers le micro est alors morte. Une redetection au lancement remet tout d'aplomb.
-        _ = RescanPcAsync();
     }
 
     bool _rescanning;
@@ -95,8 +92,9 @@ public sealed class LightController : IDisposable
             if (_rescanning) continue;
             if (CloseGHubIfRunning())
             {
+                // Le micro est pilote en direct (YetiXLighting) : il suffit de lui renvoyer la couleur.
                 await Task.Delay(TimeSpan.FromSeconds(2), ct);
-                await RescanPcAsync();
+                if (!IsScreenModeOn) Pc.SetAll(Pc.LastColor);
                 continue;
             }
             await RefreshPcAsync(reconnect: !Pc.IsConnected);

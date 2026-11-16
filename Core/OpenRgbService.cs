@@ -29,6 +29,16 @@ public sealed class OpenRgbService : IDisposable
     public bool IsLit => LastColor != Rgb.Black;
     public string? LastError { get; private set; }
 
+    /// <summary>
+    /// Le micro Yeti X est pilote par Lueur directement (HID++), pas par OpenRGB : OpenRGB ne lui faisait
+    /// parvenir les couleurs qu'une fois sur deux, et ses changements de mode le remettaient au noir.
+    /// </summary>
+    public YetiXLighting Yeti { get; } = new();
+    const string YetiName = "Yeti X";
+
+    /// <summary>Appareil OpenRGB qui est en fait le Yeti X : OpenRGB n'y touche plus du tout.</summary>
+    bool IsYeti(int index) => _devices[index].Name.Contains("Yeti", StringComparison.OrdinalIgnoreCase);
+
     public async Task<bool> ConnectAsync(string? exePath, bool launchIfNeeded, CancellationToken ct)
     {
         if (await Task.Run(TryConnect, ct)) return true;
@@ -168,13 +178,15 @@ public sealed class OpenRgbService : IDisposable
                 if (SizeEmptyArgbZones()) _devices = _client.GetAllControllerData();
                 Devices = _devices
                     .Select((d, i) => new PcDevice(i, d.Name, d.Type.ToString(), d.Colors.Length))
+                    .Where(d => !d.Name.Contains("Yeti", StringComparison.OrdinalIgnoreCase))
+                    .Append(new PcDevice(-1, YetiName, "Microphone", 12))
                     .ToList();
                 // Mode "Direct"/"Custom" : sinon l'effet materiel de la carte (arc-en-ciel...) reprend la main.
                 for (int i = 0; i < _devices.Length; i++)
                 {
+                    if (IsYeti(i)) continue; // un changement de mode le remet au noir
                     try { _client.SetCustomMode(i); } catch (Exception) { }
                 }
-                StartKeepAlive();
                 LastError = null;
                 return true;
             }
@@ -225,52 +237,32 @@ public sealed class OpenRgbService : IDisposable
         return resized;
     }
 
-    System.Threading.Timer? _keepAlive;
-
-    /// <summary>
-    /// Les peripheriques Logitech (Yeti X) repassent sur leur eclairage interne s'ils ne recoivent plus de
-    /// couleur pendant quelques secondes : on leur renvoie la couleur courante toutes les 2 s.
-    /// Les autres appareils gardent leur couleur et ne sont pas concernes.
-    /// </summary>
-    void StartKeepAlive()
-    {
-        _keepAlive ??= new System.Threading.Timer(_ =>
-        {
-            if (!Monitor.TryEnter(_lock)) return;
-            try
-            {
-                if (_client?.Connected != true) return;
-                // Seulement les couleurs : OpenRGB ne transmet au micro que ce qui a change. Ne PAS remettre le
-                // mode Direct ici : chez OpenRGB, un changement de mode relance la preparation HID++ du micro,
-                // qui le repasse au noir avant les couleurs (micro eteint, changements lents).
-                for (int i = 0; i < _devices.Length; i++)
-                    if (_devices[i].Vendor == "Logitech" && !Excluded.Contains(_devices[i].Name))
-                        Push(i, LastColor);
-            }
-            finally { Monitor.Exit(_lock); }
-        }, null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
-    }
-
     /// <summary>Met tous les peripheriques non exclus a la meme couleur (noir = eteint).</summary>
     public void SetAll(Rgb color)
     {
         LastColor = color;
+        if (!Excluded.Contains(YetiName)) Yeti.SetColor(color);
         lock (_lock)
         {
             if (_client?.Connected != true) return;
             for (int i = 0; i < _devices.Length; i++)
-                if (!Excluded.Contains(_devices[i].Name))
+                if (!IsYeti(i) && !Excluded.Contains(_devices[i].Name))
                     Push(i, color);
         }
     }
 
     public void SetDevice(string name, Rgb color)
     {
+        if (name == YetiName)
+        {
+            Yeti.SetColor(color);
+            return;
+        }
         lock (_lock)
         {
             if (_client?.Connected != true) return;
             for (int i = 0; i < _devices.Length; i++)
-                if (_devices[i].Name == name)
+                if (_devices[i].Name == name && !IsYeti(i))
                     Push(i, color);
         }
     }
@@ -309,7 +301,7 @@ public sealed class OpenRgbService : IDisposable
 
     public void Dispose()
     {
-        _keepAlive?.Dispose();
+        Yeti.Dispose();
         lock (_lock) CloseClient();
     }
 }
